@@ -32,10 +32,13 @@ module FFMPEG
       std_output = ''
       std_error = ''
 
-      Open3.popen3(*command) do |stdin, stdout, stderr|
-        std_output = stdout.read unless stdout.nil?
-        std_error = stderr.read unless stderr.nil?
-      end
+      Open3.popen3(*command) {|stdin, stdout, stderr|
+        out_reader = Thread.new { stdout.read unless stdout.nil? }
+        err_reader = Thread.new { stderr.read unless stderr.nil? }
+
+        std_error = err_reader.value.to_s
+        std_output = out_reader.value.to_s
+      }
 
       fix_encoding(std_output)
       fix_encoding(std_error)
